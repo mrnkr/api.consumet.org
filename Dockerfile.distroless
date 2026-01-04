@@ -1,7 +1,10 @@
-FROM node:20 as builder
+FROM node:24 AS base
 
 LABEL version="1.0.0"
 LABEL description="Consumet API (fastify) Docker Image"
+
+# Install pnpm
+RUN corepack enable
 
 WORKDIR /app
 
@@ -10,21 +13,33 @@ ENV NODE_ENV=production
 ENV NPM_CONFIG_LOGLEVEL=warn
 ENV PORT=3000
 
-# copy project definition/dependencies files, for better reuse of layers
-COPY package*.json ./
-
-# install dependencies here, for better reuse of layers
-RUN npm install && npm audit fix
-
-# copy all sources in the container (exclusions in .dockerignore file)
-COPY . .
+# Copy package manager files (these change less frequently)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 
-# release layer (the only one in the final image)
-FROM gcr.io/distroless/nodejs:18 AS release
-COPY --from=builder /app /app
+FROM base AS prod-deps
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+  pnpm install --prod --frozen-lockfile
+
+FROM base AS build
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+  pnpm install --frozen-lockfile
+
+# Copy only the source code needed for building
+COPY src ./src
+COPY tsconfig*.json ./
+
+RUN pnpm build
+
+FROM gcr.io/distroless/nodejs24-debian12:nonroot AS release
+
 WORKDIR /app
+
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
 
 EXPOSE 3000
 
-CMD [ "./src/main" ]
+CMD [ "dist/main" ]

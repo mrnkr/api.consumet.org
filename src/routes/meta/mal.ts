@@ -1,16 +1,27 @@
 import { FastifyRequest, FastifyReply, FastifyInstance, RegisterOptions } from 'fastify';
-import { META, PROVIDERS_LIST } from '@consumet/extensions';
+import { PROVIDERS_LIST } from '@consumet/extensions';
+import { MyanimelistImpl } from '../../providers/meta/mal';
 
 const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
-  let mal = new META.Myanimelist();
+  let mal = new MyanimelistImpl();
 
   fastify.get('/', (_, rp) => {
     rp.status(200).send({
       intro:
         "Welcome to the mal provider: check out the provider's website @ https://mal.co/",
-      routes: ['/:query', '/info/:id', '/watch/:episodeId'],
+      routes: ['/animelist/:username', '/:query', '/info/:id', '/watch/:episodeId'],
       documentation: 'https://docs.consumet.org/#tag/mal',
     });
+  });
+
+  fastify.get('/animelist/:username', async (request: FastifyRequest, reply: FastifyReply) => {
+    const username = (request.params as { username: string }).username;
+
+    const status = (request.query as { status: number }).status;
+
+    const res = await mal.fetchUserAnimeList(username, status);
+
+    reply.status(200).send(res);
   });
 
   fastify.get('/:query', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -38,7 +49,7 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
         (p) => p.name.toLowerCase() === provider.toLocaleLowerCase(),
       );
 
-      mal = new META.Myanimelist(possibleProvider);
+      mal = new MyanimelistImpl(possibleProvider);
     }
 
     if (isDub === 'true' || isDub === '1') isDub = true;
@@ -48,9 +59,9 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     else fetchFiller = false;
 
     try {
-      const res = await mal.fetchAnimeInfo(id, isDub as boolean, fetchFiller as boolean);
+      const res = await mal.fetchAnimeInfo(id);
 
-      mal = new META.Myanimelist(undefined);
+      mal = new MyanimelistImpl(undefined);
       reply.status(200).send(res);
     } catch (err: any) {
       reply.status(500).send({ message: err.message });
@@ -68,14 +79,14 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
           (p) => p.name.toLowerCase() === provider.toLocaleLowerCase(),
         );
 
-        mal = new META.Myanimelist(possibleProvider);
+        mal = new MyanimelistImpl(possibleProvider);
       }
       try {
         const res = await mal
           .fetchEpisodeSources(episodeId)
           .catch((err) => reply.status(404).send({ message: err }));
 
-        mal = new META.Myanimelist(undefined);
+        mal = new MyanimelistImpl(undefined);
         reply.status(200).send(res);
       } catch (err) {
         reply
