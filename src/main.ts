@@ -13,6 +13,7 @@ import meta from './routes/meta';
 import news from './routes/news';
 import chalk from 'chalk';
 import Utils from './utils';
+import { setupDiscoveryServer } from './utils/discovery';
 
 export const redis =
   process.env.REDIS_HOST &&
@@ -76,6 +77,8 @@ export const tmdbApi = process.env.TMDB_KEY && process.env.TMDB_KEY;
         error: 'page not found',
       });
     });
+
+    setupDiscoveryServer();
 
     fastify.listen({ port: PORT, host: '0.0.0.0' }, (e, address) => {
       if (e) throw e;
