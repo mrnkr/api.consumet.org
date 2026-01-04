@@ -15,7 +15,10 @@ export class MyanimelistImpl extends META.Myanimelist {
 
         if (firstCandidate) {
           const providerAnimeInfo = await this.provider.fetchAnimeInfo(firstCandidate.id);
-          animeInfo.episodes = providerAnimeInfo.episodes;
+          return {
+            ...providerAnimeInfo,
+            id: animeId,
+          };
         }
       }
     }
