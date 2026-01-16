@@ -17,7 +17,7 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
   fastify.get('/animelist/:username', async (request: FastifyRequest, reply: FastifyReply) => {
     const username = (request.params as { username: string }).username;
 
-    const status = (request.query as { status: number }).status;
+    const status = (request.query as { status: string }).status;
 
     const res = await mal.fetchUserAnimeList(username, status);
 

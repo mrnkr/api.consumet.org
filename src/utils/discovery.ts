@@ -2,6 +2,11 @@ import dgram from 'dgram';
 import os from 'os';
 
 function getLocalIpAddress() {
+  // Use HOST_IP environment variable if provided (for Docker)
+  if (process.env.HOST_IP) {
+    return process.env.HOST_IP;
+  }
+
   const interfaces = os.networkInterfaces();
   
   for (const name of Object.keys(interfaces)) {
